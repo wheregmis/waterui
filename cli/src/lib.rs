@@ -12,3 +12,4 @@ pub mod templates;
 pub mod toolchain;
 pub mod utils;
 pub mod water_dir;
+pub mod web;

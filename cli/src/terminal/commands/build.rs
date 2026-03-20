@@ -9,7 +9,7 @@ use crate::shell::{self, display_output};
 use crate::{error, header, success};
 use waterui_cli::{
     android::platform::AndroidPlatform, apple::platform::ApplePlatform, build::BuildOptions,
-    platform::Platform as _, project::Project, toolchain::Toolchain,
+    platform::Platform as _, project::Project, toolchain::Toolchain, web::platform::WebPlatform,
 };
 
 /// Target platform for building.
@@ -23,6 +23,8 @@ pub enum TargetPlatform {
     Android,
     /// macOS.
     Macos,
+    /// Web (`wasm32-unknown-unknown`).
+    Web,
 }
 
 /// Target architecture for building.
@@ -170,6 +172,9 @@ pub async fn run(args: Args) -> Result<()> {
             (TargetPlatform::Macos, Some(arch)) => {
                 bail!("macOS only supports arm64 or x86_64, not {:?}", arch)
             }
+            // Web
+            (TargetPlatform::Web, None) => WebPlatform::new().build(&project, build_options).await,
+            (TargetPlatform::Web, Some(_)) => bail!("Web does not support --arch"),
         }
     })
     .await;
@@ -211,6 +216,13 @@ async fn check_toolchain(platform: TargetPlatform) -> Result<()> {
                 bail!("Toolchain check failed: {e}");
             }
         }
+        TargetPlatform::Web => {
+            let platform = WebPlatform::new();
+            let toolchain = platform.toolchain();
+            if let Err(e) = toolchain.check().await {
+                bail!("Toolchain check failed: {e}");
+            }
+        }
     }
     Ok(())
 }
@@ -221,5 +233,6 @@ const fn platform_name(platform: TargetPlatform) -> &'static str {
         TargetPlatform::IosSimulator => "iOS Simulator",
         TargetPlatform::Android => "Android",
         TargetPlatform::Macos => "macOS",
+        TargetPlatform::Web => "Web",
     }
 }

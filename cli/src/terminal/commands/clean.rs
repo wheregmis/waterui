@@ -9,6 +9,7 @@ use crate::shell;
 use crate::{header, success};
 use waterui_cli::{
     android::platform::AndroidPlatform, apple::platform::ApplePlatform, project::Project,
+    web::platform::WebPlatform,
 };
 
 /// Target platform for cleaning.
@@ -20,6 +21,8 @@ pub enum TargetPlatform {
     Android,
     /// All platforms.
     All,
+    /// Web.
+    Web,
 }
 
 /// Arguments for the clean command.
@@ -48,6 +51,7 @@ pub async fn run(args: Args) -> Result<()> {
         TargetPlatform::All => {
             let spinner = shell::spinner("Cleaning all build artifacts...");
             project.clean_all().await?;
+            WebPlatform::new().clean(&project).await?;
             if let Some(pb) = spinner {
                 pb.finish_and_clear();
             }
@@ -70,6 +74,14 @@ pub async fn run(args: Args) -> Result<()> {
                 pb.finish_and_clear();
             }
             success!("Cleaned Android build artifacts");
+        }
+        TargetPlatform::Web => {
+            let spinner = shell::spinner("Cleaning web build artifacts...");
+            WebPlatform::new().clean(&project).await?;
+            if let Some(pb) = spinner {
+                pb.finish_and_clear();
+            }
+            success!("Cleaned web build artifacts");
         }
     }
 

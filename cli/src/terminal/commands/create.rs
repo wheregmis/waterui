@@ -44,16 +44,18 @@ enum Platform {
     Ios,
     Android,
     MacOs,
+    Web,
 }
 
 impl Platform {
-    const ALL: [Self; 3] = [Self::Ios, Self::Android, Self::MacOs];
+    const ALL: [Self; 4] = [Self::Ios, Self::Android, Self::MacOs, Self::Web];
 
     const fn label(self) -> &'static str {
         match self {
             Self::Ios => "iOS",
             Self::Android => "Android",
             Self::MacOs => "macOS",
+            Self::Web => "Web",
         }
     }
 
@@ -62,6 +64,7 @@ impl Platform {
             "ios" => Some(Self::Ios),
             "android" => Some(Self::Android),
             "macos" => Some(Self::MacOs),
+            "web" => Some(Self::Web),
             _ => None,
         }
     }
@@ -111,7 +114,7 @@ pub async fn run(args: Args) -> Result<()> {
     let platforms = match &args.platform {
         Some(plats) => parse_platforms(plats),
         None if interactive => prompt_platforms()?,
-        None => vec![Platform::Ios, Platform::Android],
+        None => vec![Platform::Ios, Platform::Android, Platform::Web],
     };
 
     // Compute project path
@@ -170,7 +173,11 @@ pub async fn run(args: Args) -> Result<()> {
     line!();
     line!("Next steps:");
     line!("  cd {folder_name}");
-    line!("  water run --platform ios");
+    if platforms.iter().any(|p| matches!(p, Platform::Web)) {
+        line!("  water run --platform web");
+    } else {
+        line!("  water run --platform ios");
+    }
 
     Ok(())
 }
@@ -206,7 +213,7 @@ fn parse_platforms(plats: &[String]) -> Vec<Platform> {
 
 fn prompt_platforms() -> Result<Vec<Platform>> {
     let items: Vec<&str> = Platform::ALL.iter().map(|p| p.label()).collect();
-    let defaults = vec![true, true, false]; // iOS and Android selected by default
+    let defaults = vec![true, true, false, true]; // iOS, Android and Web selected by default
 
     let selections = MultiSelect::with_theme(&ColorfulTheme::default())
         .with_prompt("Select platforms")

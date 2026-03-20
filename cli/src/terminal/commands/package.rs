@@ -10,6 +10,7 @@ use crate::{header, success};
 use waterui_cli::{
     android::platform::AndroidPlatform, apple::platform::ApplePlatform, build::BuildOptions,
     platform::PackageOptions, platform::Platform, project::Project, toolchain::Toolchain,
+    web::platform::WebPlatform,
 };
 
 /// Target platform for packaging.
@@ -23,6 +24,8 @@ pub enum TargetPlatform {
     Android,
     /// macOS.
     Macos,
+    /// Web.
+    Web,
 }
 
 /// Target architecture for Android builds.
@@ -92,6 +95,9 @@ pub async fn run(args: Args) -> Result<()> {
              water package --platform android --arch arm64\n  \
              water package --platform android --arch arm64,x86_64"
         );
+    }
+    if args.platform != TargetPlatform::Android && !args.arch.is_empty() {
+        bail!("--arch is only supported for Android platform");
     }
 
     let mode = if args.release { "release" } else { "debug" };
@@ -194,6 +200,13 @@ async fn check_toolchain(platform: TargetPlatform) -> Result<()> {
                 bail!("Toolchain check failed: {e}");
             }
         }
+        TargetPlatform::Web => {
+            let platform = WebPlatform::new();
+            let toolchain = platform.toolchain();
+            if let Err(e) = toolchain.check().await {
+                bail!("Toolchain check failed: {e}");
+            }
+        }
     }
     Ok(())
 }
@@ -220,6 +233,7 @@ async fn build_for_platform(
             let p = ApplePlatform::macos();
             Ok(p.build(project, options).await?)
         }
+        TargetPlatform::Web => Ok(WebPlatform::new().build(project, options).await?),
     }
 }
 
@@ -245,6 +259,7 @@ async fn package_for_platform(
             let p = ApplePlatform::macos();
             Ok(project.package(p, options).await?)
         }
+        TargetPlatform::Web => Ok(WebPlatform::new().package(project).await?),
     }
 }
 
@@ -254,5 +269,6 @@ const fn platform_name(platform: TargetPlatform) -> &'static str {
         TargetPlatform::IosSimulator => "iOS Simulator",
         TargetPlatform::Android => "Android",
         TargetPlatform::Macos => "macOS",
+        TargetPlatform::Web => "Web",
     }
 }
