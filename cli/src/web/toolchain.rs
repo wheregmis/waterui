@@ -20,7 +20,7 @@ impl Installation for WebToolchainInstall {
 
     async fn install(&self) -> Result<(), Self::Error> {
         Err(eyre::eyre!(
-            "Auto-fix is not implemented for web toolchain. Install `wasm-bindgen-cli` and add Rust target `wasm32-unknown-unknown`."
+            "Auto-fix is not implemented for web toolchain. Run: cargo install wasm-bindgen-cli && rustup target add wasm32-unknown-unknown."
         ))
     }
 }
@@ -52,11 +52,13 @@ impl Toolchain for WebToolchain {
         }
 
         let installed = String::from_utf8_lossy(&output.stdout);
-        if !installed.lines().any(|line| line.trim() == "wasm32-unknown-unknown") {
+        if !installed
+            .lines()
+            .any(|line| line.trim() == "wasm32-unknown-unknown")
+        {
             return Err(ToolchainError::fixable(WebToolchainInstall));
         }
 
         Ok(())
     }
 }
-

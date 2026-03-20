@@ -1,4 +1,7 @@
 //! Web platform implementation.
+//!
+//! Note: running the local web development server requires Python in PATH
+//! (`python3` preferred, `python` fallback).
 
 use std::path::{Path, PathBuf};
 
@@ -7,13 +10,12 @@ use smol::{fs, process::Command};
 use target_lexicon::Triple;
 
 use crate::{
-    build::BuildOptions,
-    device::Artifact,
-    project::Project,
-    toolchain::Toolchain,
-    utils::command,
+    build::BuildOptions, device::Artifact, project::Project, utils::command,
     web::toolchain::WebToolchain,
 };
+
+/// Default local web development server port.
+pub const WEB_DEV_SERVER_PORT: u16 = 8000;
 
 /// Web platform implementation.
 #[derive(Debug, Clone, Copy)]
@@ -80,7 +82,7 @@ impl WebPlatform {
             return Err(eyre::eyre!("wasm-bindgen failed"));
         }
 
-        ensure_web_assets(project.root()).await?;
+        ensure_web_assets(project.root(), project.crate_name()).await?;
 
         Ok(out_dir)
     }
@@ -95,7 +97,7 @@ impl WebPlatform {
             ));
         }
 
-        ensure_web_assets(project.root()).await?;
+        ensure_web_assets(project.root(), project.crate_name()).await?;
         Ok(Artifact::new(project.bundle_identifier(), web_dir))
     }
 
@@ -117,11 +119,20 @@ impl WebPlatform {
             ));
         }
 
-        let mut server = Command::new("python3");
+        let mut server = if crate::utils::which("python3").await.is_ok() {
+            Command::new("python3")
+        } else if crate::utils::which("python").await.is_ok() {
+            Command::new("python")
+        } else {
+            return Err(eyre::eyre!(
+                "Python is required to run the web dev server. Install Python 3 and ensure `python3` or `python` is in PATH."
+            ));
+        };
+
         let status = command(&mut server)
             .arg("-m")
             .arg("http.server")
-            .arg("8000")
+            .arg(WEB_DEV_SERVER_PORT.to_string())
             .arg("--directory")
             .arg(&web_dir)
             .status()
@@ -153,12 +164,16 @@ impl Default for WebPlatform {
     }
 }
 
-async fn ensure_web_assets(root: &Path) -> eyre::Result<()> {
+/// Ensure required web assets exist under `<project>/web`.
+///
+/// Creates `web/` if missing and writes a default `index.html` when absent.
+async fn ensure_web_assets(root: &Path, crate_name: &str) -> eyre::Result<()> {
     let web_dir = root.join("web");
     fs::create_dir_all(&web_dir).await?;
 
     let index_html = web_dir.join("index.html");
     if !index_html.exists() {
+        let js_module = format!("./pkg/{}.js", crate_name.replace('-', "_"));
         let content = r#"<!doctype html>
 <html lang="en">
   <head>
@@ -168,15 +183,15 @@ async fn ensure_web_assets(root: &Path) -> eyre::Result<()> {
   </head>
   <body>
     <script type="module">
-      import init from "./pkg/waterui_app.js";
+      import init from "__WASM_JS_MODULE__";
       init();
     </script>
   </body>
 </html>
-"#;
+"#
+        .replace("__WASM_JS_MODULE__", &js_module);
         fs::write(index_html, content).await?;
     }
 
     Ok(())
 }
-

@@ -23,7 +23,7 @@ use waterui_cli::{
     platform::{PackageOptions, Platform},
     project::Project,
     toolchain::Toolchain,
-    web::platform::WebPlatform,
+    web::platform::{WEB_DEV_SERVER_PORT, WebPlatform},
 };
 
 /// Target platform for running.
@@ -117,7 +117,13 @@ pub async fn run(args: Args) -> Result<()> {
         let platform = WebPlatform::new();
         shell::status("▶", "Building...");
         display_output(platform.build(&project, BuildOptions::new(false, false))).await?;
-        shell::status("▶", "Running web server on http://127.0.0.1:8000 ...");
+        shell::status(
+            "▶",
+            format!(
+                "Running web server on http://127.0.0.1:{} ...",
+                WEB_DEV_SERVER_PORT
+            ),
+        );
         note!("Press Ctrl+C to stop the server");
         platform.run(&project).await?;
         return Ok(());
@@ -171,6 +177,7 @@ pub async fn run(args: Args) -> Result<()> {
     let platform_name = match args.platform {
         TargetPlatform::Android => "Android",
         TargetPlatform::Ios | TargetPlatform::Macos => "Apple",
+        TargetPlatform::Web => "Web",
     };
 
     // Get hot reload event receiver if available

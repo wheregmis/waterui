@@ -213,7 +213,7 @@ fn parse_platforms(plats: &[String]) -> Vec<Platform> {
 
 fn prompt_platforms() -> Result<Vec<Platform>> {
     let items: Vec<&str> = Platform::ALL.iter().map(|p| p.label()).collect();
-    let defaults = vec![true, true, false, true]; // iOS, Android and Web selected by default
+    let defaults = vec![true, true, false, true]; // [iOS, Android, macOS, Web]
 
     let selections = MultiSelect::with_theme(&ColorfulTheme::default())
         .with_prompt("Select platforms")
