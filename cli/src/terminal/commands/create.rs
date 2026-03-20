@@ -68,6 +68,10 @@ impl Platform {
             _ => None,
         }
     }
+
+    const fn default_selected(self) -> bool {
+        !matches!(self, Self::MacOs)
+    }
 }
 
 /// Run the create command.
@@ -213,9 +217,10 @@ fn parse_platforms(plats: &[String]) -> Vec<Platform> {
 
 fn prompt_platforms() -> Result<Vec<Platform>> {
     let items: Vec<&str> = Platform::ALL.iter().map(|p| p.label()).collect();
+    // Select iOS, Android, and Web by default; macOS remains opt-in.
     let defaults: Vec<bool> = Platform::ALL
         .iter()
-        .map(|platform| !matches!(platform, Platform::MacOs))
+        .map(|platform| platform.default_selected())
         .collect();
 
     let selections = MultiSelect::with_theme(&ColorfulTheme::default())

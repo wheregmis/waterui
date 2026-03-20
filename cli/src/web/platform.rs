@@ -184,7 +184,7 @@ async fn ensure_web_assets(root: &Path, crate_name: &str) -> eyre::Result<()> {
   <body>
     <script type="module">
       import init from "__WASM_JS_MODULE__";
-      init();
+      await init();
     </script>
   </body>
 </html>
