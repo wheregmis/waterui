@@ -1,0 +1,27 @@
+[package]
+name = "web-counter-example"
+version = "0.1.0"
+edition = "2024"
+authors = ["Lexo Liu"]
+description = "Web DOM counter example for WaterUI framework"
+license.workspace = true
+repository.workspace = true
+readme = "../../README.md"
+keywords = ["ui", "framework", "example", "web", "counter"]
+categories = ["gui"]
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+wasm-bindgen = "0.2"
+web-sys = { version = "0.3", features = [
+  "Window",
+  "Document",
+  "Element",
+  "HtmlElement",
+  "Node",
+  "EventTarget",
+  "MouseEvent",
+] }
