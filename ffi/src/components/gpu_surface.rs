@@ -331,7 +331,9 @@ pub unsafe extern "C" fn waterui_gpu_surface_init(
             return Box::into_raw(state);
         }
 
-        tracing::error!("[GpuSurface] init failed: no compatible backend could configure the surface");
+        tracing::error!(
+            "[GpuSurface] init failed: no compatible backend could configure the surface"
+        );
         core::ptr::null_mut()
     }));
 

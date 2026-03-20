@@ -23,6 +23,7 @@ use waterui_cli::{
     platform::{PackageOptions, Platform},
     project::Project,
     toolchain::Toolchain,
+    web::platform::{WEB_DEV_SERVER_PORT, WebPlatform},
 };
 
 /// Target platform for running.
@@ -34,6 +35,8 @@ pub enum TargetPlatform {
     Android,
     /// macOS (current machine).
     Macos,
+    /// Web (local browser via wasm + local HTTP server).
+    Web,
 }
 
 /// Arguments for the run command.
@@ -103,6 +106,29 @@ pub async fn run(args: Args) -> Result<()> {
         platform_name(args.platform)
     );
 
+    if matches!(args.platform, TargetPlatform::Web) {
+        let spinner = shell::spinner("Checking toolchain...");
+        check_toolchain(args.platform).await?;
+        if let Some(pb) = spinner {
+            pb.finish_and_clear();
+        }
+        success!("Toolchain ready");
+
+        let platform = WebPlatform::new();
+        shell::status("▶", "Building...");
+        display_output(platform.build(&project, BuildOptions::new(false, false))).await?;
+        shell::status(
+            "▶",
+            format!(
+                "Running web server on http://127.0.0.1:{} ...",
+                WEB_DEV_SERVER_PORT
+            ),
+        );
+        note!("Press Ctrl+C to stop the server");
+        platform.run(&project).await?;
+        return Ok(());
+    }
+
     // Step 1: Check toolchain
     let spinner = shell::spinner("Checking toolchain...");
     check_toolchain(args.platform).await?;
@@ -151,6 +177,7 @@ pub async fn run(args: Args) -> Result<()> {
     let platform_name = match args.platform {
         TargetPlatform::Android => "Android",
         TargetPlatform::Ios | TargetPlatform::Macos => "Apple",
+        TargetPlatform::Web => "Web",
     };
 
     // Get hot reload event receiver if available
@@ -328,6 +355,13 @@ async fn check_toolchain(platform: TargetPlatform) -> Result<()> {
                 bail!("Toolchain check failed: {e}");
             }
         }
+        TargetPlatform::Web => {
+            let platform = WebPlatform::new();
+            let toolchain = platform.toolchain();
+            if let Err(e) = toolchain.check().await {
+                bail!("Toolchain check failed: {e}");
+            }
+        }
     }
     Ok(())
 }
@@ -403,6 +437,9 @@ async fn find_device(platform: TargetPlatform, device_id: Option<&str>) -> Resul
                 avd_name,
             )))
         }
+        TargetPlatform::Web => {
+            bail!("Web does not use device selection");
+        }
     }
 }
 
@@ -420,6 +457,7 @@ const fn platform_name(platform: TargetPlatform) -> &'static str {
         TargetPlatform::Ios => "iOS Simulator",
         TargetPlatform::Android => "Android",
         TargetPlatform::Macos => "macOS",
+        TargetPlatform::Web => "Web",
     }
 }
 
